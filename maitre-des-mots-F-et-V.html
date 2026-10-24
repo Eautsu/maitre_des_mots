@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Maître des mots ! — F et V</title>
+<style>
+  :root{
+    --ardoise: #14279b;
+    --ardoise-dark: #0d1c6e;
+    --craie: #f4efe1;
+    --or: #e8b13c;
+    --bon: #6fbf8b;
+    --mauvais: #d96a4e;
+    --carte-bord: #d8cfb4;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    min-height:100%;
+    background:
+      radial-gradient(ellipse at top, rgba(255,255,255,0.05), transparent 60%),
+      var(--ardoise);
+    color:var(--craie);
+    font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding: clamp(14px, 4vw, 40px);
+  }
+  header{
+    width:100%;
+    max-width: 560px;
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom: 18px;
+  }
+  h1{
+    font-size: clamp(1.3rem, 4vw, 1.7rem);
+    margin:0;
+    letter-spacing: 0.5px;
+  }
+  h1 .accent{ color: var(--or); }
+  #compteur{
+    font-size: 0.95rem;
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+
+  .scene{
+    width:100%;
+    max-width: 560px;
+    perspective: 1400px;
+    -webkit-perspective: 1400px;
+  }
+
+  .carte{
+    position:relative;
+    width:100%;
+    min-height: 320px;
+    transform-style: preserve-3d;
+    -webkit-transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(.4,.2,.2,1);
+  }
+  .carte.retournee{ transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
+
+  .face{
+    position:absolute;
+    inset:0;
+    backface-visibility:hidden;
+    -webkit-backface-visibility:hidden;
+    border-radius: 22px;
+    border: 3px solid var(--carte-bord);
+    background: var(--craie);
+    color: #29281f;
+    padding: clamp(20px, 5vw, 34px);
+    display:flex;
+    flex-direction:column;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+  }
+  .face.dos{ transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
+
+  /* Filet de sécurité : sur certains navigateurs mobiles,
+     backface-visibility n'est pas fiable. On masque explicitement
+     la face qui ne doit pas être visible, indépendamment du rendu 3D. */
+  .carte:not(.retournee) .face.dos{ visibility: hidden; }
+  .carte.retournee .face.recto{ visibility: hidden; }
+
+  .etiquette{
+    align-self:flex-start;
+    font-size: 0.72rem;
+    font-weight:bold;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: var(--ardoise);
+    color: var(--craie);
+    margin-bottom: 14px;
+  }
+
+  .clue{
+    font-size: clamp(1.05rem, 3.6vw, 1.3rem);
+    line-height:1.45;
+    flex:1;
+  }
+
+  .zone-reponse{ margin-top: 18px; }
+
+  .image-carte{
+    display:block;
+    max-width: 100%;
+    max-height: 180px;
+    margin: 0 auto 14px;
+    border-radius: 12px;
+    object-fit: contain;
+  }
+  .image-manquante{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap: 4px;
+    width: 100%;
+    height: 140px;
+    margin: 0 auto 14px;
+    border: 2px dashed #c9c2ab;
+    border-radius: 12px;
+    color: #8a8262;
+    font-size: 0.85rem;
+    text-align:center;
+  }
+  .image-manquante code{ font-size: 0.8rem; }
+
+  input[type="text"]{
+    width:100%;
+    font-size: 1.1rem;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 2px solid #c9c2ab;
+    font-family: inherit;
+  }
+  input[type="text"]:focus{
+    outline: 3px solid var(--or);
+    outline-offset: 1px;
+  }
+
+  .options{ display:flex; flex-wrap:wrap; gap:10px; margin-top: 6px; }
+
+  button{
+    font-family: inherit;
+    font-size: 1rem;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 18px;
+    cursor:pointer;
+    font-weight:bold;
+  }
+  .btn-option{
+    background: #eee6cf;
+    color:#29281f;
+    flex:1;
+    min-width: 110px;
+  }
+  .btn-option:hover, .btn-option:focus-visible{ background: var(--or); }
+
+  .btn-principal{
+    background: var(--or);
+    color:#29281f;
+    margin-top:14px;
+    width:100%;
+  }
+  .btn-principal:hover, .btn-principal:focus-visible{ filter: brightness(1.08); }
+
+  .verdict{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size: 1.15rem;
+    font-weight:bold;
+    margin-bottom: 10px;
+  }
+  .verdict.ok{ color: #206a3f; }
+  .verdict.non{ color: #a83a20; }
+  .verdict.reprise{ color: #93690f; }
+  .pastille{
+    width: 30px; height:30px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    color:white; font-size:1rem; flex-shrink:0;
+  }
+  .pastille.ok{ background: var(--bon); }
+  .pastille.non{ background: var(--mauvais); }
+  .pastille.reprise{ background: var(--or); }
+
+  .reponse-correcte{
+    font-size: clamp(1.4rem, 5vw, 1.9rem);
+    font-weight:bold;
+    margin: 4px 0 14px;
+  }
+
+  .astuce{ font-size:0.9rem; opacity:0.75; margin-top:auto; }
+  .rappel-question{
+    font-size: 0.95rem;
+    opacity: 0.8;
+    font-style: italic;
+    margin: 0 0 10px;
+    line-height: 1.4;
+  }
+  .mot-cible{
+    font-size: 0.95rem;
+    opacity: 0.75;
+    margin: 4px 0 0;
+  }
+  .mot-cible strong{ color: var(--ardoise); }
+
+  #ecran-fin{
+    display:none;
+    width:100%;
+    max-width:560px;
+    background: var(--craie);
+    color:#29281f;
+    border-radius: 22px;
+    border: 3px solid var(--carte-bord);
+    padding: clamp(22px, 5vw, 36px);
+    text-align:center;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.35);
+  }
+  #ecran-fin h2{ margin-top:0; }
+  #score-final{ font-size: 2.2rem; font-weight:bold; color:#206a3f; margin: 6px 0 6px; }
+  #echelle-verbale{ font-size: 1.05rem; margin: 0 0 18px; }
+  #liste-a-revoir{ text-align:left; margin: 0 0 18px; padding-left: 20px; }
+  #liste-a-revoir li{ margin-bottom:4px; }
+
+  .visually-hidden{
+    position:absolute; width:1px; height:1px; overflow:hidden;
+    clip: rect(0 0 0 0); white-space:nowrap;
+  }
+
+  .consigne-ecriture{
+    width:100%;
+    max-width: 560px;
+    background: rgba(232,177,60,0.12);
+    border: 1px solid rgba(232,177,60,0.4);
+    color: var(--craie);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    text-align:center;
+    margin-bottom: 16px;
+  }
+
+  header .droite{ display:flex; align-items:baseline; gap:12px; }
+  #btn-terminer{
+    background: transparent;
+    color: var(--craie);
+    border: 2px solid rgba(244,239,225,0.5);
+    padding: 4px 12px;
+    font-size: 0.85rem;
+    border-radius: 999px;
+  }
+  #btn-terminer:hover, #btn-terminer:focus-visible{ background: rgba(255,255,255,0.12); }
+
+  .entete{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .entete .etiquette{ margin-bottom:0; }
+  .btn-voix{
+    background: #eee6cf;
+    color:#29281f;
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    padding: 0;
+    font-size: 1.15rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .btn-voix:hover, .btn-voix:focus-visible{ background: var(--or); }
+  .verdict .btn-voix{ margin-left:auto; }
+  .consigne-ecriture .btn-voix{ width:32px; height:32px; font-size:1rem; margin-left:8px; vertical-align:middle; }
+  .sans-voix .btn-voix{ display:none; }
+
+  .reglages{
+    width:100%; max-width:560px;
+    margin-bottom: 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(244,239,225,0.3);
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+  }
+  .reglages summary{ cursor:pointer; font-weight:bold; }
+  .reglages-corps{ margin-top: 10px; display:flex; flex-direction:column; gap:10px; }
+  .reglages label{ display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .reglages input[type="checkbox"]{ width:20px; height:20px; accent-color: var(--or); }
+  .reglages fieldset{ border:1px solid rgba(244,239,225,0.3); border-radius:10px; padding:8px 12px; }
+  .reglages legend{ padding:0 6px; }
+  #filtres-types{ display:flex; flex-wrap:wrap; gap:6px 18px; }
+  #msg-filtre{ margin:0; color: var(--or); font-size:0.85rem; min-height:1em; }
+  .reglages .note{ margin:0; opacity:0.7; font-size:0.8rem; }
+
+  .barre-accents{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .btn-accent{
+    background:#eee6cf; color:#29281f; padding:6px 0; width:38px;
+    font-size:1.1rem; border-radius:10px;
+  }
+  .btn-accent:hover{ background: var(--or); }
+  body:not(.touches-on) .barre-accents{ display:none; }
+  .piege{
+    margin: 0 0 10px; padding: 8px 12px;
+    background: #fff3cf; border-left: 4px solid var(--or);
+    border-radius: 8px; font-size: 0.9rem; line-height:1.4; display:none;
+  }
+  #detail-score{ margin:0 0 12px; opacity:0.8; }
+
+  @media (prefers-reduced-motion: reduce){
+    .carte{ transition:none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Maître des mots <span class="accent">! F et V</span></h1>
+  <div class="droite">
+    <div id="compteur">Carte 1</div>
+    <button id="btn-terminer" type="button" title="Terminer et voir le score">Terminer</button>
+  </div>
+</header>
+
+<details class="reglages" id="reglages">
+  <summary>⚙️ Réglages</summary>
+  <div class="reglages-corps">
+    <label><input type="checkbox" id="opt-accents"> ✍️ Accents obligatoires (comme en dictée)</label>
+    <label><input type="checkbox" id="opt-touches"> ⌨️ Afficher les lettres accentuées (é è ê à ç…) sous la zone de réponse</label>
+    <label id="ligne-voix"><input type="checkbox" id="opt-voix"> 🔊 Lecture vocale automatique des consignes</label>
+    <p class="note" id="note-voix">Le bouton 🔊 de chaque carte permet aussi de ré-écouter la consigne.</p>
+    <fieldset>
+      <legend>Types de cartes à jouer</legend>
+      <div id="filtres-types"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Lots de mots (1 = premiers appris, 3 = derniers)</legend>
+      <div id="filtres-lots"></div>
+    </fieldset>
+    <p id="msg-filtre"></p>
+  </div>
+</details>
+
+<p class="consigne-ecriture"><span id="texte-consigne">✏️ Écris d'abord le mot demandé sur ton cahier de brouillon, avant de le taper ou de le choisir ici.</span><button class="btn-voix" id="voix-consigne" type="button" aria-label="Écouter la consigne" title="Écouter">🔊</button></p>
+
+<div class="scene">
+  <div class="carte" id="carte">
+    <div class="face recto" id="face-recto">
+      <div class="entete">
+        <span class="etiquette" id="etiquette-type">Devine le mot</span>
+        <button class="btn-voix" id="voix-recto" type="button" aria-label="Écouter la consigne" title="Écouter">🔊</button>
+      </div>
+      <div class="clue" id="texte-clue">Chargement…</div>
+      <div class="zone-reponse" id="zone-reponse"></div>
+    </div>
+    <div class="face dos" id="face-dos">
+      <div class="verdict" id="verdict-bloc">
+        <span class="pastille" id="pastille"></span>
+        <span id="verdict-texte"></span>
+        <button class="btn-voix" id="voix-dos" type="button" aria-label="Écouter la correction" title="Écouter">🔊</button>
+      </div>
+      <p class="rappel-question" id="rappel-question"></p>
+      <div class="reponse-correcte" id="reponse-correcte"></div>
+      <p class="mot-cible" id="mot-cible"></p>
+      <p class="piege" id="piege"></p>
+      <button class="btn-principal" id="btn-suivant">Carte suivante</button>
+    </div>
+  </div>
+</div>
+
+<div id="ecran-fin">
+  <h2>Partie terminée !</h2>
+  <p id="texte-score-intro">Tu as gagné</p>
+  <div id="score-final">0 / 25</div>
+  <p id="detail-score"></p>
+  <p id="echelle-verbale"></p>
+  <div id="bloc-revoir">
+    <p>Mots à revoir la prochaine fois :</p>
+    <ul id="liste-a-revoir"></ul>
+  </div>
+  <button class="btn-principal" id="btn-rejouer">Rejouer</button>
+</div>
+
+<p aria-live="polite" class="visually-hidden" id="annonce"></p>
+
+<script>
+const CARTES = [
+  {
+    "type": "libre",
+    "clue": "Je suis un verbe à l'infinitif. J'ai deux R qui se suivent. Mon contraire est PARTIR. Je fais rentrer le train dans la gare et je permets au sportif de terminer sa course. Qui suis-je ?",
+    "reponse": "arriver",
+    "mot": "arriver",
+    "lot": 2
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un verbe conjugué avec IL. J'ai un T muet à la fin. Je dis qu'on réalise quelque chose. Il [...] ses devoirs avant le goûter. Qui suis-je ?",
+    "reponse": "fait",
+    "mot": "fait",
+    "lot": 2
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un mot invariable. J'ai un accent grave sur le A. Je sers à montrer quelque chose, à présenter quelqu'un ou à annoncer la fin d'un travail : te [...] enfin ! Qui suis-je ?",
+    "reponse": "voilà",
+    "mot": "voilà",
+    "lot": 1
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un mot invariable. J'ai un C qui se prononce S. Je montre ce qui va arriver ou ce qui est tout près de toi : [...] mon cahier. Qui suis-je ?",
+    "reponse": "voici",
+    "mot": "voici",
+    "lot": 1
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un mot invariable de quatre lettres. J'ai un E qui se prononce È, sans accent. Mon contraire est SANS. Je dis qu'on est accompagné : tu viens [...] moi ?",
+    "reponse": "avec",
+    "mot": "avec",
+    "lot": 1
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un adjectif. Ma lettre finale est muette : mets-moi au féminin pour l'entendre. Mon contraire est FAIBLE. Je soulève des poids lourds. Qui suis-je ?",
+    "reponse": "fort",
+    "mot": "fort",
+    "lot": 1
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un nom commun masculin. J'ai un T muet à la fin. Je pousse sur un arbre ou dans le jardin : on me croque, la pomme et la poire sont mes copines. Qui suis-je ?",
+    "reponse": "fruit",
+    "mot": "fruit",
+    "lot": 1
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un adjectif. Ma lettre finale est muette : mets-moi au féminin pour l'entendre. Mon contraire est CHAUD. Je suis bleu sur le robinet. Qui suis-je ?",
+    "reponse": "froid",
+    "mot": "froid",
+    "lot": 2
+  },
+  {
+    "type": "choix",
+    "clue": "Le mot qui désigne une grande image collée sur un mur pour annoncer quelque chose a-t-il un ou deux F ?",
+    "options": [
+      "un F",
+      "deux F"
+    ],
+    "reponse": "deux F",
+    "mot": "affiche",
+    "lot": 2
+  },
+  {
+    "type": "choix",
+    "clue": "Le mot qui désigne un grand lieu où vivent beaucoup de gens (comme Paris) a-t-il un ou deux L ?",
+    "options": [
+      "un L",
+      "deux L"
+    ],
+    "reponse": "deux L",
+    "mot": "ville",
+    "lot": 2
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un nom commun masculin. Je finis par AGE. Je suis plus petit qu'une grande cité : on y connaît tous ses voisins et il y a des champs autour. Qui suis-je ?",
+    "reponse": "village",
+    "mot": "village",
+    "lot": 3
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un nom commun masculin. Je finis par EU. Je brûle, je chauffe et je fais de la lumière. Au carrefour, quand je suis rouge, les voitures s'arrêtent. Qui suis-je ?",
+    "reponse": "feu",
+    "mot": "feu",
+    "lot": 3
+  },
+  {
+    "type": "choix",
+    "clue": "Le mot qui désigne quelque chose qu'on doit régler ou un objet personnel a-t-il un ou deux F ?",
+    "options": [
+      "un F",
+      "deux F"
+    ],
+    "reponse": "deux F",
+    "mot": "affaire",
+    "lot": 3
+  },
+  {
+    "type": "choix",
+    "clue": "Le verbe qui signifie dire quelque chose avec certitude a-t-il un ou deux F ?",
+    "options": [
+      "un F",
+      "deux F"
+    ],
+    "reponse": "deux F",
+    "mot": "affirme",
+    "lot": 3
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un nom commun masculin. Au pluriel, je change de terminaison. J'ai un sabot à chaque pied, et mon petit est le poulain. Autrefois, j'étais un moyen de transport. Qui suis-je ?",
+    "reponse": "cheval",
+    "mot": "cheval",
+    "lot": 3
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un nom commun masculin. Je suis un moyen de transport. Je vole dans le ciel et je laisse une traînée blanche. Qui suis-je ?",
+    "reponse": "avion",
+    "mot": "avion",
+    "lot": 3
+  },
+  {
+    "type": "libre",
+    "clue": "Je suis un nom commun masculin. J'ai un accent aigu. Je suis un moyen de transport qui ne pollue pas. Je roule sur deux roues et on me fait avancer en pédalant. Qui suis-je ?",
+    "reponse": "vélo",
+    "mot": "vélo",
+    "lot": 3
+  },
+  {
+    "type": "image",
+    "image": "avion",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "avion",
+    "mot": "avion",
+    "lot": 3
+  },
+  {
+    "type": "image",
+    "image": "avec",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "avec",
+    "mot": "avec",
+    "lot": 1
+  },
+  {
+    "type": "image",
+    "image": "village",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "village",
+    "mot": "village",
+    "lot": 3
+  },
+  {
+    "type": "image",
+    "image": "froid",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "froid",
+    "mot": "froid",
+    "lot": 2
+  },
+  {
+    "type": "image",
+    "image": "feu",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "feu",
+    "mot": "feu",
+    "lot": null
+  },
+  {
+    "type": "image",
+    "image": "fait",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "fait",
+    "mot": "fait",
+    "lot": null
+  },
+  {
+    "type": "image",
+    "image": "fort",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "fort",
+    "mot": "fort",
+    "lot": null
+  },
+  {
+    "type": "image",
+    "image": "velo",
+    "clue": "Écris le mot correspondant à l'image.",
+    "reponse": "vélo",
+    "mot": "vélo",
+    "lot": null
+  }
+];
+const PIEGES = "accent grave sur voilà (pas voici) - t muet (fort -> forte, fruit -> fruitée) - double l de ville.";
+
+const ETIQUETTES = { libre: "Devine le mot", choix: "Choisis la bonne graphie", vrai_faux: "Vrai ou faux ?", image: "Écris le mot" };
+
+let file = [];
+let carteCourante = null;
+let resolues = 0;
+let score = 0;
+let motsARevoir = [];
+let dejaRepondu = false;
+let vues = new Set();      // cartes auxquelles le joueur a répondu au moins une fois
+let reussies = new Set();  // cartes réussies (reprises comprises)
+let premier = new Set();   // cartes réussies du premier coup
+
+const TYPES_LABELS = { libre: "Devinettes", image: "Images", choix: "Choix", vrai_faux: "Vrai / faux" };
+let lotsPresents = [...new Set(CARTES.map(c => c.lot).filter(l => l != null))].sort();
+let lotsActifs = new Set(lotsPresents);
+let typesActifs = new Set(Object.keys(TYPES_LABELS).filter(t => CARTES.some(c => c.type === t)));
+let voixActive = false;
+
+function lireReglage(cle){ try { return localStorage.getItem(cle); } catch(e){ return null; } }
+function ecrireReglage(cle, val){ try { localStorage.setItem(cle, val); } catch(e){} }
+
+// ---------- lecture vocale ----------
+const VOIX_OK = "speechSynthesis" in window && "SpeechSynthesisUtterance" in window;
+let voixFr = null;
+function choisirVoix(){
+  if (!VOIX_OK) return;
+  const v = window.speechSynthesis.getVoices();
+  voixFr = v.find(x => /^fr[-_]FR/i.test(x.lang)) || v.find(x => /^fr/i.test(x.lang)) || null;
+}
+if (VOIX_OK){
+  choisirVoix();
+  window.speechSynthesis.onvoiceschanged = choisirVoix;
+}
+// Graphèmes lus lettre par lettre (« avec CH » -> « c h ») sauf « conjugué avec ON/IL… »
+const GRAPHEMES = ["CH","AN","AM","EN","EM","IN","IM","ON","OM","OU","AU","OI","FR","FL","BR","BL","PR","PL","TR","VR","CR","EAU","AI","EI","QU","GN","PH"];
+function preparerTexte(txt){
+  let t = String(txt);
+  t = t.replace(/\[([^\]]+)\]/g, "$1");
+  t = t.replace(/(^|[^\p{L}])([A-ZÉÈÀ]{2,3})(?![\p{L}])/gu, (m, avant, g, pos, tout) => {
+    if (!GRAPHEMES.includes(g)) return m;
+    const debut = tout.slice(0, pos + avant.length).toLowerCase();
+    if (/conjugué avec $/.test(debut)) return m;
+    return avant + g.split("").join(", ");
+  });
+  return t;
+}
+function parler(txt){
+  if (!VOIX_OK || !txt) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(preparerTexte(txt));
+    u.lang = "fr-FR";
+    if (voixFr) u.voice = voixFr;
+    u.rate = 0.85;
+    window.speechSynthesis.speak(u);
+  } catch(e){}
+}
+function textePourLecture(carte){
+  let t = carte.clue;
+  if (carte.type === "choix"){
+    const opts = carte.options.map(o => (typeof o === "object" && o) ? o.label : o);
+    t += " Les choix sont : " + opts.join(", ou ") + ".";
+  } else if (carte.type === "vrai_faux"){
+    t += " Vrai ou faux ?";
+  }
+  return t;
+}
+function lireCarteCourante(){ parler(textePourLecture(CARTES[carteCourante.idx])); }
+function lireCorrection(){
+  const carte = CARTES[carteCourante.idx];
+  parler(verdictTexteEl.textContent + " La bonne réponse est : " + carte.reponse + ".");
+}
+
+// ---------- réglages ----------
+function cartesJouables(){
+  return CARTES.map((c, i) => i).filter(i => typesActifs.has(CARTES[i].type) &&
+    (CARTES[i].lot == null || lotsActifs.has(CARTES[i].lot)));
+}
+function construireFiltres(){
+  const zone = document.getElementById("filtres-types");
+  zone.innerHTML = "";
+  Object.keys(TYPES_LABELS).forEach(t => {
+    const nb = CARTES.filter(c => c.type === t).length;
+    if (nb === 0) return;
+    const lab = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = typesActifs.has(t);
+    cb.addEventListener("change", () => {
+      const msg = document.getElementById("msg-filtre");
+      if (cb.checked){ typesActifs.add(t); }
+      else {
+        if (typesActifs.size === 1){ cb.checked = true; msg.textContent = "Garde au moins un type de cartes."; return; }
+        typesActifs.delete(t);
+      }
+      msg.textContent = "Nouvelle partie lancée avec ce choix de cartes.";
+      ecrireReglage("mdm-types", [...typesActifs].join(","));
+      demarrer();
+    });
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(` ${TYPES_LABELS[t]} (${nb})`));
+    zone.appendChild(lab);
+  });
+  const zoneLots = document.getElementById("filtres-lots");
+  zoneLots.innerHTML = "";
+  zoneLots.parentElement.style.display = lotsPresents.length ? "" : "none";
+  lotsPresents.forEach(l => {
+    const nb = CARTES.filter(c => c.lot === l).length;
+    const lab = document.createElement("label");
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = lotsActifs.has(l);
+    cb.addEventListener("change", () => {
+      const msg = document.getElementById("msg-filtre");
+      if (cb.checked){ lotsActifs.add(l); }
+      else {
+        if (lotsActifs.size === 1){ cb.checked = true; msg.textContent = "Garde au moins un lot."; return; }
+        lotsActifs.delete(l);
+      }
+      msg.textContent = "Nouvelle partie lancée avec ce choix de cartes.";
+      demarrer();
+    });
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(` Lot ${l} (${nb})`));
+    zoneLots.appendChild(lab);
+  });
+}
+
+const MAX_TENTATIVES = 2; // 1 essai + 1 reprise, comme la carte remise sous le tas
+
+const ECHELLE_VERBALE = [
+  { seuil: 100, message: "Score parfait ! Tu maîtrises tous ces mots." },
+  { seuil: 90, message: "Excellent ! Presque tous les mots sont acquis." },
+  { seuil: 75, message: "Bien joué ! Quelques mots restent à consolider." },
+  { seuil: 50, message: "Pas mal, entraîne-toi encore sur les mots ci-dessous." },
+  { seuil: 0, message: "Bon début : on retravaille ensemble ces mots la prochaine fois." },
+];
+
+function messageEchelle(pourcentage){
+  return ECHELLE_VERBALE.find(e => pourcentage >= e.seuil).message;
+}
+
+const carteEl = document.getElementById("carte");
+const compteurEl = document.getElementById("compteur");
+const etiquetteEl = document.getElementById("etiquette-type");
+const clueEl = document.getElementById("texte-clue");
+const zoneReponseEl = document.getElementById("zone-reponse");
+const verdictBlocEl = document.getElementById("verdict-bloc");
+const pastilleEl = document.getElementById("pastille");
+const verdictTexteEl = document.getElementById("verdict-texte");
+const reponseCorrecteEl = document.getElementById("reponse-correcte");
+const rappelQuestionEl = document.getElementById("rappel-question");
+const motCibleEl = document.getElementById("mot-cible");
+const ecranFinEl = document.getElementById("ecran-fin");
+const sceneEl = document.querySelector(".scene");
+const annonceEl = document.getElementById("annonce");
+
+function normalise(txt){
+  return txt
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+let accentsStricts = true;
+function nettoyer(txt){
+  return txt.toString().trim().toLowerCase().normalize("NFC")
+    .replace(/[\u2018\u2019]/g, "'").replace(/\s+/g, " ");
+}
+function sansCirconflexe(t){ return t.replace(/\u00ee/g, "i").replace(/\u00fb/g, "u"); }
+function reponseJuste(donnee, attendue){
+  if (!accentsStricts) return normalise(donnee) === normalise(attendue);
+  const a = nettoyer(donnee), b = nettoyer(attendue);
+  // î et û : les deux graphies sont admises (orthographe rectifiée)
+  return a === b || sansCirconflexe(a) === sansCirconflexe(b);
+}
+function seulementAccents(donnee, attendue){
+  return accentsStricts && !reponseJuste(donnee, attendue) &&
+         normalise(donnee) === normalise(attendue);
+}
+
+let derniereCle = null;
+function cleMot(entree){
+  const c = CARTES[entree.idx];
+  const m = c.mot || (c.type === "vrai_faux" ? null : c.reponse);
+  return m ? normalise(String(m)).replace(/^(un|une|le|la|les|l'|du|de la|des|il|elle|on|je)\s+/, "") : null;
+}
+
+function melanger(tableau){
+  const copie = tableau.slice();
+  for (let i = copie.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [copie[i], copie[j]] = [copie[j], copie[i]];
+  }
+  return copie;
+}
+
+function demarrer(){
+  file = melanger(cartesJouables()).map(idx => ({ idx, tentatives: 0 }));
+  derniereCle = null;
+  resolues = 0;
+  score = 0;
+  motsARevoir = [];
+  vues = new Set();
+  reussies = new Set();
+  premier = new Set();
+  if (VOIX_OK) window.speechSynthesis.cancel();
+  ecranFinEl.style.display = "none";
+  sceneEl.style.display = "";
+  piocherSuivante();
+}
+
+function piocherSuivante(){
+  if (file.length === 0){
+    finDePartie();
+    return;
+  }
+  // jamais deux cartes de suite sur le même mot (ex. chat en image puis chat en devinette)
+  if (derniereCle){
+    const k = file.findIndex(e => cleMot(e) !== derniereCle);
+    if (k > 0) file.unshift(file.splice(k, 1)[0]);
+  }
+  carteCourante = file.shift();
+  derniereCle = cleMot(carteCourante);
+  afficherCarte();
+}
+
+function afficherCarte(){
+  dejaRepondu = false;
+  carteEl.classList.remove("retournee");
+  const carte = CARTES[carteCourante.idx];
+  compteurEl.textContent = `Carte ${Math.min(resolues + 1, cartesJouables().length)} / ${cartesJouables().length}`;
+  etiquetteEl.textContent = ETIQUETTES[carte.type];
+  clueEl.textContent = carte.clue;
+  zoneReponseEl.innerHTML = "";
+
+  if (carte.type === "image"){
+    // Chemin de l'image : image intégrée (data:), nom complet (pomme.jpg)
+    // ou nom sans extension (pomme) -> on essaie jpg, jpeg, png, webp.
+    const EXTS = ["jpg", "jpeg", "png", "webp"];
+    const sansExt = carte.image.indexOf("data:") !== 0 && !/\.[A-Za-z0-9]{2,4}$/.test(carte.image);
+    let essai = 0;
+    const img = document.createElement("img");
+    img.className = "image-carte";
+    img.src = carte.image.indexOf("data:") === 0 ? carte.image :
+      sansExt ? `images/${carte.image}.${EXTS[0]}` : `images/${carte.image}`;
+    img.alt = "Devine le mot";
+    img.onerror = function(){
+      if (sansExt && essai < EXTS.length - 1){
+        essai++;
+        this.src = `images/${carte.image}.${EXTS[essai]}`;
+        return;
+      }
+      const espace = document.createElement("div");
+      espace.className = "image-manquante";
+      espace.innerHTML = `🖼️<br>image manquante :<br><code>${carte.image}</code>`;
+      this.replaceWith(espace);
+    };
+    zoneReponseEl.appendChild(img);
+  }
+
+  if (carte.type === "libre" || carte.type === "image"){
+    const input = document.createElement("input");
+    input.type = "text";
+    input.placeholder = "Écris ta réponse…";
+    input.autocomplete = "off";
+    input.id = "champ-libre";
+    const btn = document.createElement("button");
+    btn.className = "btn-principal";
+    btn.textContent = "Valider";
+    btn.addEventListener("click", () => valider(input.value));
+    input.addEventListener("keydown", e => { if (e.key === "Enter") valider(input.value); });
+    zoneReponseEl.appendChild(input);
+    const barre = document.createElement("div");
+    barre.className = "barre-accents";
+    "éèêàâùçôîëï".split("").forEach(ch => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn-accent";
+      b.textContent = ch;
+      b.tabIndex = -1;
+      b.setAttribute("aria-label", "lettre " + ch);
+      b.addEventListener("mousedown", e => e.preventDefault());
+      b.addEventListener("click", () => {
+        const d = input.selectionStart == null ? input.value.length : input.selectionStart;
+        const f = input.selectionEnd == null ? d : input.selectionEnd;
+        input.value = input.value.slice(0, d) + ch + input.value.slice(f);
+        input.focus();
+        input.setSelectionRange(d + 1, d + 1);
+      });
+      barre.appendChild(b);
+    });
+    zoneReponseEl.appendChild(barre);
+    zoneReponseEl.appendChild(btn);
+    setTimeout(() => input.focus(), 350);
+  } else {
+    const wrap = document.createElement("div");
+    wrap.className = "options";
+    const options = carte.type === "vrai_faux" ? ["vrai", "faux"] : carte.options;
+    options.forEach(opt => {
+      // une option peut être une simple chaîne (label = valeur validée) ou
+      // un objet {label, valeur} quand l'intitulé du bouton doit rester
+      // discret sans révéler l'orthographe exacte de la réponse.
+      const estObjet = typeof opt === "object" && opt !== null;
+      const label = estObjet ? opt.label : opt;
+      const valeur = estObjet ? opt.valeur : opt;
+      const b = document.createElement("button");
+      b.className = "btn-option";
+      b.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+      b.addEventListener("click", () => valider(valeur));
+      wrap.appendChild(b);
+    });
+    zoneReponseEl.appendChild(wrap);
+  }
+  if (voixActive) lireCarteCourante();
+}
+
+function valider(reponseDonnee){
+  if (dejaRepondu) return;
+  dejaRepondu = true;
+  const carte = CARTES[carteCourante.idx];
+  const correct = reponseJuste(reponseDonnee, carte.reponse);
+  const presque = seulementAccents(reponseDonnee, carte.reponse);
+  carteCourante.tentatives++;
+  vues.add(carteCourante.idx);
+  if (correct) reussies.add(carteCourante.idx);
+  if (correct && carteCourante.tentatives === 1) premier.add(carteCourante.idx);
+
+  if (correct){
+    score++;
+    resolues++;
+    verdictBlocEl.className = "verdict ok";
+    pastilleEl.className = "pastille ok";
+    pastilleEl.textContent = "✓";
+    verdictTexteEl.textContent = "Bravo, c'est juste !";
+  } else if (carteCourante.tentatives < MAX_TENTATIVES){
+    // comme la carte ratée remise sous le tas : on la repropose plus tard
+    // dans la même partie, sans encore la compter comme terminée.
+    const decalage = Math.min(file.length, 2 + Math.floor(Math.random() * 3));
+    file.splice(decalage, 0, carteCourante);
+    verdictBlocEl.className = "verdict reprise";
+    pastilleEl.className = "pastille reprise";
+    pastilleEl.textContent = "↻";
+    verdictTexteEl.textContent = "Pas tout à fait. On la reverra un peu plus tard.";
+  } else {
+    resolues++;
+    verdictBlocEl.className = "verdict non";
+    pastilleEl.className = "pastille non";
+    pastilleEl.textContent = "✗";
+    verdictTexteEl.textContent = "Pas grave, ce mot reviendra une prochaine fois.";
+  }
+  if (presque) verdictTexteEl.textContent = "Presque ! Vérifie les accents. " + (carteCourante.tentatives < MAX_TENTATIVES ? "On la reverra un peu plus tard." : "Ce mot reviendra une prochaine fois.");
+  const piegeEl = document.getElementById("piege");
+  if (!correct && PIEGES){
+    piegeEl.textContent = "💡 " + PIEGES;
+    piegeEl.style.display = "block";
+  } else {
+    piegeEl.textContent = "";
+    piegeEl.style.display = "none";
+  }
+  rappelQuestionEl.textContent = carte.clue;
+  reponseCorrecteEl.textContent = carte.reponse;
+  if (carte.mot && normalise(carte.mot) !== normalise(carte.reponse)) {
+    motCibleEl.innerHTML = `Mot cible : <strong>${carte.mot}</strong>`;
+    motCibleEl.style.display = "block";
+  } else {
+    motCibleEl.textContent = "";
+    motCibleEl.style.display = "none";
+  }
+  annonceEl.textContent = correct ? "Bonne réponse" : "Réponse incorrecte, la bonne réponse s'affiche";
+
+  carteEl.classList.add("retournee");
+  if (voixActive) lireCorrection();
+}
+
+document.getElementById("btn-suivant").addEventListener("click", piocherSuivante);
+
+function finDePartie(){
+  if (VOIX_OK) window.speechSynthesis.cancel();
+  sceneEl.style.display = "none";
+  ecranFinEl.style.display = "block";
+  const nbVues = vues.size;
+  const scoreEl = document.getElementById("score-final");
+  const introEl = document.getElementById("texte-score-intro");
+  const echelleEl = document.getElementById("echelle-verbale");
+  const detailEl = document.getElementById("detail-score");
+  if (nbVues === 0){
+    introEl.textContent = "Tu n'as pas encore joué de carte.";
+    scoreEl.textContent = "0 / 0";
+    detailEl.textContent = "";
+    echelleEl.textContent = "";
+  } else {
+    introEl.textContent = "Du premier coup, tu as réussi";
+    scoreEl.textContent = `${premier.size} / ${nbVues}`;
+    detailEl.textContent = `Avec les reprises : ${reussies.size} / ${nbVues}`;
+    const pourcentage = Math.round((premier.size / nbVues) * 100);
+    echelleEl.textContent = messageEchelle(pourcentage);
+  }
+  motsARevoir = [...vues].filter(i => !premier.has(i)).map(i => CARTES[i].mot || CARTES[i].reponse);
+  const liste = document.getElementById("liste-a-revoir");
+  const blocRevoir = document.getElementById("bloc-revoir");
+  liste.innerHTML = "";
+  if (motsARevoir.length === 0){
+    blocRevoir.style.display = "none";
+  } else {
+    blocRevoir.style.display = "block";
+    [...new Set(motsARevoir)].forEach(mot => {
+      const li = document.createElement("li");
+      li.textContent = mot;
+      liste.appendChild(li);
+    });
+  }
+}
+
+document.getElementById("btn-rejouer").addEventListener("click", demarrer);
+
+document.getElementById("btn-terminer").addEventListener("click", finDePartie);
+document.getElementById("voix-recto").addEventListener("click", lireCarteCourante);
+document.getElementById("voix-dos").addEventListener("click", lireCorrection);
+document.getElementById("voix-consigne").addEventListener("click",
+  () => parler(document.getElementById("texte-consigne").textContent.replace("✏️", "")));
+
+if (!VOIX_OK){
+  document.body.classList.add("sans-voix");
+  document.getElementById("ligne-voix").style.display = "none";
+  document.getElementById("note-voix").style.display = "none";
+}
+const optVoix = document.getElementById("opt-voix");
+voixActive = VOIX_OK && lireReglage("mdm-voix") === "1";
+optVoix.checked = voixActive;
+optVoix.addEventListener("change", () => {
+  voixActive = optVoix.checked;
+  ecrireReglage("mdm-voix", voixActive ? "1" : "0");
+  if (voixActive && carteCourante && !dejaRepondu) lireCarteCourante();
+  if (!voixActive && VOIX_OK) window.speechSynthesis.cancel();
+});
+const optAccents = document.getElementById("opt-accents");
+accentsStricts = lireReglage("mdm-accents") !== "0";
+optAccents.checked = accentsStricts;
+document.body.classList.toggle("accents-off", !accentsStricts);
+const optTouches = document.getElementById("opt-touches");
+optTouches.checked = lireReglage("mdm-touches") === "1";
+document.body.classList.toggle("touches-on", optTouches.checked);
+optTouches.addEventListener("change", () => {
+  ecrireReglage("mdm-touches", optTouches.checked ? "1" : "0");
+  document.body.classList.toggle("touches-on", optTouches.checked);
+});
+optAccents.addEventListener("change", () => {
+  accentsStricts = optAccents.checked;
+  ecrireReglage("mdm-accents", accentsStricts ? "1" : "0");
+  document.body.classList.toggle("accents-off", !accentsStricts);
+});
+const typesSauves = lireReglage("mdm-types");
+if (typesSauves){
+  const t = new Set(typesSauves.split(",").filter(x => TYPES_LABELS[x] && CARTES.some(c => c.type === x)));
+  if (t.size) typesActifs = t;
+}
+construireFiltres();
+demarrer();
+</script>
+<script data-goatcounter="https://euryale.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
