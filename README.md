@@ -96,18 +96,6 @@ generateur_maitre_des_mots.html    créer ou modifier une séance
 images/                            illustrations des cartes (voir images/README.md)
 README.md  LICENSE  NOTICE.md      documentation et licences
 ```
-
-## Publier sur GitHub Pages
-
-1. Déposez tous les fichiers à la racine du dépôt, **avec le dossier `images/` rempli**
-   (les noms attendus sont listés dans [`images/README.md`](images/README.md)).
-2. Dans *Settings → Pages*, choisissez la branche `main` et le dossier `/ (root)`.
-3. Le jeu est accessible à l'adresse indiquée par GitHub, la page d'accueil étant `index.html`.
-
-Une image manquante n'empêche pas de jouer : un espace réservé s'affiche.
-
-## Licence et images
-
 - Code, devinettes et documentation : **CC BY-NC-SA 4.0**, © Eautsu (voir [`LICENSE`](LICENSE)).
 - Illustrations : issues de la bibliothèque **Canva** (contenu gratuit), **non couvertes** par cette
   licence ; voir [`NOTICE.md`](NOTICE.md) pour les conditions de réutilisation.
