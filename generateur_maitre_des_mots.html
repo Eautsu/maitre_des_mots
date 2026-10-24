@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Générateur — Maître des mots !</title>
+<style>
+  :root{
+    --ardoise: #14279b;
+    --craie: #f4efe1;
+    --or: #e8b13c;
+    --carte-bord: #d8cfb4;
+    --rouge: #b64d4d;
+    --vert: #4a7a5c;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    min-height:100vh;
+    background: var(--ardoise);
+    color: var(--craie);
+    font-family: "Trebuchet MS", "Segoe UI", Verdana, sans-serif;
+    padding: clamp(16px, 4vw, 40px);
+  }
+  .page{ max-width: 780px; margin: 0 auto; }
+  h1{ font-size: clamp(1.3rem, 4vw, 1.7rem); margin: 0 0 4px; }
+  h1 .accent{ color: var(--or); }
+  p.sous{ margin: 0 0 24px; opacity: 0.85; font-size: 0.95rem; }
+
+  .bloc{
+    background: var(--craie);
+    color: #29281f;
+    border: 3px solid var(--carte-bord);
+    border-radius: 18px;
+    padding: 20px clamp(16px, 4vw, 26px);
+    margin-bottom: 18px;
+  }
+  .bloc h2{ font-size: 1.05rem; margin: 0 0 14px; }
+
+  label{ display:block; font-size: 0.85rem; font-weight:bold; margin: 10px 0 4px; }
+  label:first-child{ margin-top:0; }
+  input[type="text"], textarea, select{
+    width:100%;
+    font: inherit;
+    font-size: 0.95rem;
+    padding: 9px 11px;
+    border-radius: 9px;
+    border: 2px solid var(--carte-bord);
+    background: #fff;
+    color: #29281f;
+  }
+  textarea{ min-height: 56px; resize: vertical; }
+  input:focus, textarea:focus, select:focus{ outline: 2px solid var(--ardoise); }
+
+  .ligne-options{ display:flex; gap:8px; flex-wrap:wrap; }
+  .ligne-options input{ flex:1; min-width: 90px; }
+
+  .carte-item{
+    border: 2px solid var(--carte-bord);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .carte-item .num{
+    position:absolute; top:-11px; left:12px;
+    background: var(--ardoise); color: var(--craie);
+    font-size: 0.75rem; font-weight:bold;
+    padding: 2px 9px; border-radius: 999px;
+  }
+  .carte-item .retirer{
+    position:absolute; top:10px; right:10px;
+    background:none; border:none; cursor:pointer;
+    font-size: 1.1rem; color: var(--rouge); line-height:1;
+  }
+  .alerte-fuite{
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: var(--rouge);
+    font-weight:bold;
+  }
+  .ok-fuite{
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: var(--vert);
+  }
+
+  .champ-image-note{ font-size: 0.78rem; opacity:0.7; margin-top:2px; }
+
+  button{ font: inherit; cursor:pointer; border:none; }
+  .btn-ajouter{
+    width:100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 2px dashed var(--carte-bord);
+    background: transparent;
+    color: #5b5636;
+    font-weight:bold;
+  }
+  .btn-ajouter:hover{ background: rgba(0,0,0,0.04); }
+
+  .btn-principal{
+    width:100%;
+    padding: 15px;
+    border-radius: 12px;
+    background: var(--or);
+    color: #29281f;
+    font-weight:bold;
+    font-size: 1.05rem;
+  }
+  .btn-principal:disabled{ opacity: 0.5; cursor:not-allowed; }
+  .btn-principal:hover:not(:disabled){ filter: brightness(1.05); }
+
+  .resume{ font-size: 0.85rem; opacity: 0.75; margin-top: 8px; text-align:center; }
+  .message-final{
+    text-align:center;
+    font-size: 0.9rem;
+    margin-top: 10px;
+    min-height: 1.2em;
+  }
+  .message-final.succes{ color: #7bd88f; }
+
+  .type-select{ margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Générateur <span class="accent">— Maître des mots !</span></h1>
+  <p class="sous">Crée une nouvelle séance solo directement ici. Le fichier généré fonctionne exactement comme les autres
+  séances (mêmes règles, même mécanique de jeu).</p>
+
+  <div class="bloc">
+    <h2>Modifier un jeu déjà créé</h2>
+    <p class="champ-image-note">Ouvre un fichier « maitre-des-mots-….html » (créé ici ou existant) : ses cartes s'affichent ci-dessous pour être ajoutées, modifiées ou supprimées. Le fichier téléchargé ensuite remplace l'ancien et profite de la dernière version du jeu.</p>
+    <input type="file" id="fichier-existant" accept=".html,text/html">
+    <p class="message-final" id="message-import"></p>
+  </div>
+
+  <div class="bloc">
+    <h2>Titre de la séance</h2>
+    <input type="text" id="titre-seance" placeholder="Ex. : G et J">
+  </div>
+
+  <div class="bloc">
+    <h2>Pièges de la séance (facultatif)</h2>
+    <p class="champ-image-note">Affiché au verso, après une erreur. Ex. : « s muet (plus, trop) - im devant m, p, b ».</p>
+    <textarea id="pieges-seance" placeholder="Ex. : t muet (tout, partout) - d/t en finale (un retard -> retarder)"></textarea>
+  </div>
+
+  <div class="bloc">
+    <h2>Cartes</h2>
+    <button class="btn-ajouter" id="btn-lots" type="button">Répartir les lots : 5 / 5 / reste (selon l'ordre des cartes)</button>
+    <div id="liste-cartes"></div>
+    <button class="btn-ajouter" id="btn-ajouter-carte" type="button">+ Ajouter une carte</button>
+  </div>
+
+  <button class="btn-principal" id="btn-generer" type="button">Télécharger le fichier HTML</button>
+  <p class="resume" id="resume">0 carte</p>
+  <p class="message-final" id="message-final"></p>
+</div>
+
+<script>
+const TEMPLATE_JEU = "<!DOCTYPE html>\n<html lang=\"fr\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1\">\n<title>__TITRE_PAGE__</title>\n<style>\n  :root{\n    --ardoise: #14279b;\n    --ardoise-dark: #0d1c6e;\n    --craie: #f4efe1;\n    --or: #e8b13c;\n    --bon: #6fbf8b;\n    --mauvais: #d96a4e;\n    --carte-bord: #d8cfb4;\n  }\n  *{ box-sizing: border-box; }\n  html,body{ height:100%; }\n  body{\n    margin:0;\n    min-height:100%;\n    background:\n      radial-gradient(ellipse at top, rgba(255,255,255,0.05), transparent 60%),\n      var(--ardoise);\n    color:var(--craie);\n    font-family: \"Trebuchet MS\", \"Segoe UI\", Verdana, sans-serif;\n    display:flex;\n    flex-direction:column;\n    align-items:center;\n    padding: clamp(14px, 4vw, 40px);\n  }\n  header{\n    width:100%;\n    max-width: 560px;\n    display:flex;\n    justify-content:space-between;\n    align-items:baseline;\n    margin-bottom: 18px;\n  }\n  h1{\n    font-size: clamp(1.3rem, 4vw, 1.7rem);\n    margin:0;\n    letter-spacing: 0.5px;\n  }\n  h1 .accent{ color: var(--or); }\n  #compteur{\n    font-size: 0.95rem;\n    opacity: 0.85;\n    white-space: nowrap;\n  }\n\n  .scene{\n    width:100%;\n    max-width: 560px;\n    perspective: 1400px;\n    -webkit-perspective: 1400px;\n  }\n\n  .carte{\n    position:relative;\n    width:100%;\n    min-height: 320px;\n    transform-style: preserve-3d;\n    -webkit-transform-style: preserve-3d;\n    transition: transform 0.6s cubic-bezier(.4,.2,.2,1);\n  }\n  .carte.retournee{ transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }\n\n  .face{\n    position:absolute;\n    inset:0;\n    backface-visibility:hidden;\n    -webkit-backface-visibility:hidden;\n    border-radius: 22px;\n    border: 3px solid var(--carte-bord);\n    background: var(--craie);\n    color: #29281f;\n    padding: clamp(20px, 5vw, 34px);\n    display:flex;\n    flex-direction:column;\n    box-shadow: 0 14px 30px rgba(0,0,0,0.35);\n  }\n  .face.dos{ transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }\n\n  /* Filet de sécurité : sur certains navigateurs mobiles,\n     backface-visibility n'est pas fiable. On masque explicitement\n     la face qui ne doit pas être visible, indépendamment du rendu 3D. */\n  .carte:not(.retournee) .face.dos{ visibility: hidden; }\n  .carte.retournee .face.recto{ visibility: hidden; }\n\n  .etiquette{\n    align-self:flex-start;\n    font-size: 0.72rem;\n    font-weight:bold;\n    padding: 3px 10px;\n    border-radius: 999px;\n    background: var(--ardoise);\n    color: var(--craie);\n    margin-bottom: 14px;\n  }\n\n  .clue{\n    font-size: clamp(1.05rem, 3.6vw, 1.3rem);\n    line-height:1.45;\n    flex:1;\n  }\n\n  .zone-reponse{ margin-top: 18px; }\n\n  .image-carte{\n    display:block;\n    max-width: 100%;\n    max-height: 180px;\n    margin: 0 auto 14px;\n    border-radius: 12px;\n    object-fit: contain;\n  }\n  .image-manquante{\n    display:flex;\n    flex-direction:column;\n    align-items:center;\n    justify-content:center;\n    gap: 4px;\n    width: 100%;\n    height: 140px;\n    margin: 0 auto 14px;\n    border: 2px dashed #c9c2ab;\n    border-radius: 12px;\n    color: #8a8262;\n    font-size: 0.85rem;\n    text-align:center;\n  }\n  .image-manquante code{ font-size: 0.8rem; }\n\n  input[type=\"text\"]{\n    width:100%;\n    font-size: 1.1rem;\n    padding: 12px 14px;\n    border-radius: 12px;\n    border: 2px solid #c9c2ab;\n    font-family: inherit;\n  }\n  input[type=\"text\"]:focus{\n    outline: 3px solid var(--or);\n    outline-offset: 1px;\n  }\n\n  .options{ display:flex; flex-wrap:wrap; gap:10px; margin-top: 6px; }\n\n  button{\n    font-family: inherit;\n    font-size: 1rem;\n    border: none;\n    border-radius: 12px;\n    padding: 12px 18px;\n    cursor:pointer;\n    font-weight:bold;\n  }\n  .btn-option{\n    background: #eee6cf;\n    color:#29281f;\n    flex:1;\n    min-width: 110px;\n  }\n  .btn-option:hover, .btn-option:focus-visible{ background: var(--or); }\n\n  .btn-principal{\n    background: var(--or);\n    color:#29281f;\n    margin-top:14px;\n    width:100%;\n  }\n  .btn-principal:hover, .btn-principal:focus-visible{ filter: brightness(1.08); }\n\n  .verdict{\n    display:flex;\n    align-items:center;\n    gap:10px;\n    font-size: 1.15rem;\n    font-weight:bold;\n    margin-bottom: 10px;\n  }\n  .verdict.ok{ color: #206a3f; }\n  .verdict.non{ color: #a83a20; }\n  .verdict.reprise{ color: #93690f; }\n  .pastille{\n    width: 30px; height:30px;\n    border-radius:50%;\n    display:flex; align-items:center; justify-content:center;\n    color:white; font-size:1rem; flex-shrink:0;\n  }\n  .pastille.ok{ background: var(--bon); }\n  .pastille.non{ background: var(--mauvais); }\n  .pastille.reprise{ background: var(--or); }\n\n  .reponse-correcte{\n    font-size: clamp(1.4rem, 5vw, 1.9rem);\n    font-weight:bold;\n    margin: 4px 0 14px;\n  }\n\n  .astuce{ font-size:0.9rem; opacity:0.75; margin-top:auto; }\n  .rappel-question{\n    font-size: 0.95rem;\n    opacity: 0.8;\n    font-style: italic;\n    margin: 0 0 10px;\n    line-height: 1.4;\n  }\n  .mot-cible{\n    font-size: 0.95rem;\n    opacity: 0.75;\n    margin: 4px 0 0;\n  }\n  .mot-cible strong{ color: var(--ardoise); }\n\n  #ecran-fin{\n    display:none;\n    width:100%;\n    max-width:560px;\n    background: var(--craie);\n    color:#29281f;\n    border-radius: 22px;\n    border: 3px solid var(--carte-bord);\n    padding: clamp(22px, 5vw, 36px);\n    text-align:center;\n    box-shadow: 0 14px 30px rgba(0,0,0,0.35);\n  }\n  #ecran-fin h2{ margin-top:0; }\n  #score-final{ font-size: 2.2rem; font-weight:bold; color:#206a3f; margin: 6px 0 6px; }\n  #echelle-verbale{ font-size: 1.05rem; margin: 0 0 18px; }\n  #liste-a-revoir{ text-align:left; margin: 0 0 18px; padding-left: 20px; }\n  #liste-a-revoir li{ margin-bottom:4px; }\n\n  .visually-hidden{\n    position:absolute; width:1px; height:1px; overflow:hidden;\n    clip: rect(0 0 0 0); white-space:nowrap;\n  }\n\n  .consigne-ecriture{\n    width:100%;\n    max-width: 560px;\n    background: rgba(232,177,60,0.12);\n    border: 1px solid rgba(232,177,60,0.4);\n    color: var(--craie);\n    border-radius: 12px;\n    padding: 10px 14px;\n    font-size: 0.9rem;\n    text-align:center;\n    margin-bottom: 16px;\n  }\n\n  header .droite{ display:flex; align-items:baseline; gap:12px; }\n  #btn-terminer{\n    background: transparent;\n    color: var(--craie);\n    border: 2px solid rgba(244,239,225,0.5);\n    padding: 4px 12px;\n    font-size: 0.85rem;\n    border-radius: 999px;\n  }\n  #btn-terminer:hover, #btn-terminer:focus-visible{ background: rgba(255,255,255,0.12); }\n\n  .entete{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }\n  .entete .etiquette{ margin-bottom:0; }\n  .btn-voix{\n    background: #eee6cf;\n    color:#29281f;\n    border-radius: 50%;\n    width: 40px; height: 40px;\n    padding: 0;\n    font-size: 1.15rem;\n    line-height: 1;\n    flex-shrink: 0;\n  }\n  .btn-voix:hover, .btn-voix:focus-visible{ background: var(--or); }\n  .verdict .btn-voix{ margin-left:auto; }\n  .consigne-ecriture .btn-voix{ width:32px; height:32px; font-size:1rem; margin-left:8px; vertical-align:middle; }\n  .sans-voix .btn-voix{ display:none; }\n\n  .reglages{\n    width:100%; max-width:560px;\n    margin-bottom: 14px;\n    background: rgba(255,255,255,0.08);\n    border: 1px solid rgba(244,239,225,0.3);\n    border-radius: 12px;\n    padding: 8px 14px;\n    font-size: 0.95rem;\n  }\n  .reglages summary{ cursor:pointer; font-weight:bold; }\n  .reglages-corps{ margin-top: 10px; display:flex; flex-direction:column; gap:10px; }\n  .reglages label{ display:flex; align-items:center; gap:8px; cursor:pointer; }\n  .reglages input[type=\"checkbox\"]{ width:20px; height:20px; accent-color: var(--or); }\n  .reglages fieldset{ border:1px solid rgba(244,239,225,0.3); border-radius:10px; padding:8px 12px; }\n  .reglages legend{ padding:0 6px; }\n  #filtres-types{ display:flex; flex-wrap:wrap; gap:6px 18px; }\n  #msg-filtre{ margin:0; color: var(--or); font-size:0.85rem; min-height:1em; }\n  .reglages .note{ margin:0; opacity:0.7; font-size:0.8rem; }\n\n  .barre-accents{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }\n  .btn-accent{\n    background:#eee6cf; color:#29281f; padding:6px 0; width:38px;\n    font-size:1.1rem; border-radius:10px;\n  }\n  .btn-accent:hover{ background: var(--or); }\n  body:not(.touches-on) .barre-accents{ display:none; }\n  .piege{\n    margin: 0 0 10px; padding: 8px 12px;\n    background: #fff3cf; border-left: 4px solid var(--or);\n    border-radius: 8px; font-size: 0.9rem; line-height:1.4; display:none;\n  }\n  #detail-score{ margin:0 0 12px; opacity:0.8; }\n\n  @media (prefers-reduced-motion: reduce){\n    .carte{ transition:none; }\n  }\n</style>\n</head>\n<body>\n\n<header>\n  __H1__\n  <div class=\"droite\">\n    <div id=\"compteur\">Carte 1</div>\n    <button id=\"btn-terminer\" type=\"button\" title=\"Terminer et voir le score\">Terminer</button>\n  </div>\n</header>\n\n<details class=\"reglages\" id=\"reglages\">\n  <summary>⚙️ Réglages</summary>\n  <div class=\"reglages-corps\">\n    <label><input type=\"checkbox\" id=\"opt-accents\"> ✍️ Accents obligatoires (comme en dictée)</label>\n    <label><input type=\"checkbox\" id=\"opt-touches\"> ⌨️ Afficher les lettres accentuées (é è ê à ç…) sous la zone de réponse</label>\n    <label id=\"ligne-voix\"><input type=\"checkbox\" id=\"opt-voix\"> 🔊 Lecture vocale automatique des consignes</label>\n    <p class=\"note\" id=\"note-voix\">Le bouton 🔊 de chaque carte permet aussi de ré-écouter la consigne.</p>\n    <fieldset>\n      <legend>Types de cartes à jouer</legend>\n      <div id=\"filtres-types\"></div>\n    </fieldset>\n    <fieldset>\n      <legend>Lots de mots (1 = premiers appris, 3 = derniers)</legend>\n      <div id=\"filtres-lots\"></div>\n    </fieldset>\n    <p id=\"msg-filtre\"></p>\n  </div>\n</details>\n\n<p class=\"consigne-ecriture\"><span id=\"texte-consigne\">✏️ Écris d'abord le mot demandé sur ton cahier de brouillon, avant de le taper ou de le choisir ici.</span><button class=\"btn-voix\" id=\"voix-consigne\" type=\"button\" aria-label=\"Écouter la consigne\" title=\"Écouter\">🔊</button></p>\n\n<div class=\"scene\">\n  <div class=\"carte\" id=\"carte\">\n    <div class=\"face recto\" id=\"face-recto\">\n      <div class=\"entete\">\n        <span class=\"etiquette\" id=\"etiquette-type\">Devine le mot</span>\n        <button class=\"btn-voix\" id=\"voix-recto\" type=\"button\" aria-label=\"Écouter la consigne\" title=\"Écouter\">🔊</button>\n      </div>\n      <div class=\"clue\" id=\"texte-clue\">Chargement…</div>\n      <div class=\"zone-reponse\" id=\"zone-reponse\"></div>\n    </div>\n    <div class=\"face dos\" id=\"face-dos\">\n      <div class=\"verdict\" id=\"verdict-bloc\">\n        <span class=\"pastille\" id=\"pastille\"></span>\n        <span id=\"verdict-texte\"></span>\n        <button class=\"btn-voix\" id=\"voix-dos\" type=\"button\" aria-label=\"Écouter la correction\" title=\"Écouter\">🔊</button>\n      </div>\n      <p class=\"rappel-question\" id=\"rappel-question\"></p>\n      <div class=\"reponse-correcte\" id=\"reponse-correcte\"></div>\n      <p class=\"mot-cible\" id=\"mot-cible\"></p>\n      <p class=\"piege\" id=\"piege\"></p>\n      <button class=\"btn-principal\" id=\"btn-suivant\">Carte suivante</button>\n    </div>\n  </div>\n</div>\n\n<div id=\"ecran-fin\">\n  <h2>Partie terminée !</h2>\n  <p id=\"texte-score-intro\">Tu as gagné</p>\n  <div id=\"score-final\">0 / 25</div>\n  <p id=\"detail-score\"></p>\n  <p id=\"echelle-verbale\"></p>\n  <div id=\"bloc-revoir\">\n    <p>Mots à revoir la prochaine fois :</p>\n    <ul id=\"liste-a-revoir\"></ul>\n  </div>\n  <button class=\"btn-principal\" id=\"btn-rejouer\">Rejouer</button>\n</div>\n\n<p aria-live=\"polite\" class=\"visually-hidden\" id=\"annonce\"></p>\n\n<script>\nconst CARTES = __CARTES_JSON__;\nconst PIEGES = __PIEGES_JSON__;\n\nconst ETIQUETTES = { libre: \"Devine le mot\", choix: \"Choisis la bonne graphie\", vrai_faux: \"Vrai ou faux ?\", image: \"Écris le mot\" };\n\nlet file = [];\nlet carteCourante = null;\nlet resolues = 0;\nlet score = 0;\nlet motsARevoir = [];\nlet dejaRepondu = false;\nlet vues = new Set();      // cartes auxquelles le joueur a répondu au moins une fois\nlet reussies = new Set();  // cartes réussies (reprises comprises)\nlet premier = new Set();   // cartes réussies du premier coup\n\nconst TYPES_LABELS = { libre: \"Devinettes\", image: \"Images\", choix: \"Choix\", vrai_faux: \"Vrai / faux\" };\nlet lotsPresents = [...new Set(CARTES.map(c => c.lot).filter(l => l != null))].sort();\nlet lotsActifs = new Set(lotsPresents);\nlet typesActifs = new Set(Object.keys(TYPES_LABELS).filter(t => CARTES.some(c => c.type === t)));\nlet voixActive = false;\n\nfunction lireReglage(cle){ try { return localStorage.getItem(cle); } catch(e){ return null; } }\nfunction ecrireReglage(cle, val){ try { localStorage.setItem(cle, val); } catch(e){} }\n\n// ---------- lecture vocale ----------\nconst VOIX_OK = \"speechSynthesis\" in window && \"SpeechSynthesisUtterance\" in window;\nlet voixFr = null;\nfunction choisirVoix(){\n  if (!VOIX_OK) return;\n  const v = window.speechSynthesis.getVoices();\n  voixFr = v.find(x => /^fr[-_]FR/i.test(x.lang)) || v.find(x => /^fr/i.test(x.lang)) || null;\n}\nif (VOIX_OK){\n  choisirVoix();\n  window.speechSynthesis.onvoiceschanged = choisirVoix;\n}\n// Graphèmes lus lettre par lettre (« avec CH » -> « c h ») sauf « conjugué avec ON/IL… »\nconst GRAPHEMES = [\"CH\",\"AN\",\"AM\",\"EN\",\"EM\",\"IN\",\"IM\",\"ON\",\"OM\",\"OU\",\"AU\",\"OI\",\"FR\",\"FL\",\"BR\",\"BL\",\"PR\",\"PL\",\"TR\",\"VR\",\"CR\",\"EAU\",\"AI\",\"EI\",\"QU\",\"GN\",\"PH\"];\nfunction preparerTexte(txt){\n  let t = String(txt);\n  t = t.replace(/\\[([^\\]]+)\\]/g, \"$1\");\n  t = t.replace(/(^|[^\\p{L}])([A-ZÉÈÀ]{2,3})(?![\\p{L}])/gu, (m, avant, g, pos, tout) => {\n    if (!GRAPHEMES.includes(g)) return m;\n    const debut = tout.slice(0, pos + avant.length).toLowerCase();\n    if (/conjugué avec $/.test(debut)) return m;\n    return avant + g.split(\"\").join(\", \");\n  });\n  return t;\n}\nfunction parler(txt){\n  if (!VOIX_OK || !txt) return;\n  try {\n    window.speechSynthesis.cancel();\n    const u = new SpeechSynthesisUtterance(preparerTexte(txt));\n    u.lang = \"fr-FR\";\n    if (voixFr) u.voice = voixFr;\n    u.rate = 0.85;\n    window.speechSynthesis.speak(u);\n  } catch(e){}\n}\nfunction textePourLecture(carte){\n  let t = carte.clue;\n  if (carte.type === \"choix\"){\n    const opts = carte.options.map(o => (typeof o === \"object\" && o) ? o.label : o);\n    t += \" Les choix sont : \" + opts.join(\", ou \") + \".\";\n  } else if (carte.type === \"vrai_faux\"){\n    t += \" Vrai ou faux ?\";\n  }\n  return t;\n}\nfunction lireCarteCourante(){ parler(textePourLecture(CARTES[carteCourante.idx])); }\nfunction lireCorrection(){\n  const carte = CARTES[carteCourante.idx];\n  parler(verdictTexteEl.textContent + \" La bonne réponse est : \" + carte.reponse + \".\");\n}\n\n// ---------- réglages ----------\nfunction cartesJouables(){\n  return CARTES.map((c, i) => i).filter(i => typesActifs.has(CARTES[i].type) &&\n    (CARTES[i].lot == null || lotsActifs.has(CARTES[i].lot)));\n}\nfunction construireFiltres(){\n  const zone = document.getElementById(\"filtres-types\");\n  zone.innerHTML = \"\";\n  Object.keys(TYPES_LABELS).forEach(t => {\n    const nb = CARTES.filter(c => c.type === t).length;\n    if (nb === 0) return;\n    const lab = document.createElement(\"label\");\n    const cb = document.createElement(\"input\");\n    cb.type = \"checkbox\";\n    cb.checked = typesActifs.has(t);\n    cb.addEventListener(\"change\", () => {\n      const msg = document.getElementById(\"msg-filtre\");\n      if (cb.checked){ typesActifs.add(t); }\n      else {\n        if (typesActifs.size === 1){ cb.checked = true; msg.textContent = \"Garde au moins un type de cartes.\"; return; }\n        typesActifs.delete(t);\n      }\n      msg.textContent = \"Nouvelle partie lancée avec ce choix de cartes.\";\n      ecrireReglage(\"mdm-types\", [...typesActifs].join(\",\"));\n      demarrer();\n    });\n    lab.appendChild(cb);\n    lab.appendChild(document.createTextNode(` ${TYPES_LABELS[t]} (${nb})`));\n    zone.appendChild(lab);\n  });\n  const zoneLots = document.getElementById(\"filtres-lots\");\n  zoneLots.innerHTML = \"\";\n  zoneLots.parentElement.style.display = lotsPresents.length ? \"\" : \"none\";\n  lotsPresents.forEach(l => {\n    const nb = CARTES.filter(c => c.lot === l).length;\n    const lab = document.createElement(\"label\");\n    const cb = document.createElement(\"input\");\n    cb.type = \"checkbox\";\n    cb.checked = lotsActifs.has(l);\n    cb.addEventListener(\"change\", () => {\n      const msg = document.getElementById(\"msg-filtre\");\n      if (cb.checked){ lotsActifs.add(l); }\n      else {\n        if (lotsActifs.size === 1){ cb.checked = true; msg.textContent = \"Garde au moins un lot.\"; return; }\n        lotsActifs.delete(l);\n      }\n      msg.textContent = \"Nouvelle partie lancée avec ce choix de cartes.\";\n      demarrer();\n    });\n    lab.appendChild(cb);\n    lab.appendChild(document.createTextNode(` Lot ${l} (${nb})`));\n    zoneLots.appendChild(lab);\n  });\n}\n\nconst MAX_TENTATIVES = 2; // 1 essai + 1 reprise, comme la carte remise sous le tas\n\nconst ECHELLE_VERBALE = [\n  { seuil: 100, message: \"Score parfait ! Tu maîtrises tous ces mots.\" },\n  { seuil: 90, message: \"Excellent ! Presque tous les mots sont acquis.\" },\n  { seuil: 75, message: \"Bien joué ! Quelques mots restent à consolider.\" },\n  { seuil: 50, message: \"Pas mal, entraîne-toi encore sur les mots ci-dessous.\" },\n  { seuil: 0, message: \"Bon début : on retravaille ensemble ces mots la prochaine fois.\" },\n];\n\nfunction messageEchelle(pourcentage){\n  return ECHELLE_VERBALE.find(e => pourcentage >= e.seuil).message;\n}\n\nconst carteEl = document.getElementById(\"carte\");\nconst compteurEl = document.getElementById(\"compteur\");\nconst etiquetteEl = document.getElementById(\"etiquette-type\");\nconst clueEl = document.getElementById(\"texte-clue\");\nconst zoneReponseEl = document.getElementById(\"zone-reponse\");\nconst verdictBlocEl = document.getElementById(\"verdict-bloc\");\nconst pastilleEl = document.getElementById(\"pastille\");\nconst verdictTexteEl = document.getElementById(\"verdict-texte\");\nconst reponseCorrecteEl = document.getElementById(\"reponse-correcte\");\nconst rappelQuestionEl = document.getElementById(\"rappel-question\");\nconst motCibleEl = document.getElementById(\"mot-cible\");\nconst ecranFinEl = document.getElementById(\"ecran-fin\");\nconst sceneEl = document.querySelector(\".scene\");\nconst annonceEl = document.getElementById(\"annonce\");\n\nfunction normalise(txt){\n  return txt\n    .toString()\n    .trim()\n    .toLowerCase()\n    .normalize(\"NFD\").replace(/[\\u0300-\\u036f]/g, \"\");\n}\n\nlet accentsStricts = true;\nfunction nettoyer(txt){\n  return txt.toString().trim().toLowerCase().normalize(\"NFC\")\n    .replace(/[\\u2018\\u2019]/g, \"'\").replace(/\\s+/g, \" \");\n}\nfunction sansCirconflexe(t){ return t.replace(/\\u00ee/g, \"i\").replace(/\\u00fb/g, \"u\"); }\nfunction reponseJuste(donnee, attendue){\n  if (!accentsStricts) return normalise(donnee) === normalise(attendue);\n  const a = nettoyer(donnee), b = nettoyer(attendue);\n  // î et û : les deux graphies sont admises (orthographe rectifiée)\n  return a === b || sansCirconflexe(a) === sansCirconflexe(b);\n}\nfunction seulementAccents(donnee, attendue){\n  return accentsStricts && !reponseJuste(donnee, attendue) &&\n         normalise(donnee) === normalise(attendue);\n}\n\nlet derniereCle = null;\nfunction cleMot(entree){\n  const c = CARTES[entree.idx];\n  const m = c.mot || (c.type === \"vrai_faux\" ? null : c.reponse);\n  return m ? normalise(String(m)).replace(/^(un|une|le|la|les|l'|du|de la|des|il|elle|on|je)\\s+/, \"\") : null;\n}\n\nfunction melanger(tableau){\n  const copie = tableau.slice();\n  for (let i = copie.length - 1; i > 0; i--){\n    const j = Math.floor(Math.random() * (i + 1));\n    [copie[i], copie[j]] = [copie[j], copie[i]];\n  }\n  return copie;\n}\n\nfunction demarrer(){\n  file = melanger(cartesJouables()).map(idx => ({ idx, tentatives: 0 }));\n  derniereCle = null;\n  resolues = 0;\n  score = 0;\n  motsARevoir = [];\n  vues = new Set();\n  reussies = new Set();\n  premier = new Set();\n  if (VOIX_OK) window.speechSynthesis.cancel();\n  ecranFinEl.style.display = \"none\";\n  sceneEl.style.display = \"\";\n  piocherSuivante();\n}\n\nfunction piocherSuivante(){\n  if (file.length === 0){\n    finDePartie();\n    return;\n  }\n  // jamais deux cartes de suite sur le même mot (ex. chat en image puis chat en devinette)\n  if (derniereCle){\n    const k = file.findIndex(e => cleMot(e) !== derniereCle);\n    if (k > 0) file.unshift(file.splice(k, 1)[0]);\n  }\n  carteCourante = file.shift();\n  derniereCle = cleMot(carteCourante);\n  afficherCarte();\n}\n\nfunction afficherCarte(){\n  dejaRepondu = false;\n  carteEl.classList.remove(\"retournee\");\n  const carte = CARTES[carteCourante.idx];\n  compteurEl.textContent = `Carte ${Math.min(resolues + 1, cartesJouables().length)} / ${cartesJouables().length}`;\n  etiquetteEl.textContent = ETIQUETTES[carte.type];\n  clueEl.textContent = carte.clue;\n  zoneReponseEl.innerHTML = \"\";\n\n  if (carte.type === \"image\"){\n    // Chemin de l'image : image intégrée (data:), nom complet (pomme.jpg)\n    // ou nom sans extension (pomme) -> on essaie jpg, jpeg, png, webp.\n    const EXTS = [\"jpg\", \"jpeg\", \"png\", \"webp\"];\n    const sansExt = carte.image.indexOf(\"data:\") !== 0 && !/\\.[A-Za-z0-9]{2,4}$/.test(carte.image);\n    let essai = 0;\n    const img = document.createElement(\"img\");\n    img.className = \"image-carte\";\n    img.src = carte.image.indexOf(\"data:\") === 0 ? carte.image :\n      sansExt ? `images/${carte.image}.${EXTS[0]}` : `images/${carte.image}`;\n    img.alt = \"Devine le mot\";\n    img.onerror = function(){\n      if (sansExt && essai < EXTS.length - 1){\n        essai++;\n        this.src = `images/${carte.image}.${EXTS[essai]}`;\n        return;\n      }\n      const espace = document.createElement(\"div\");\n      espace.className = \"image-manquante\";\n      espace.innerHTML = `🖼️<br>image manquante :<br><code>${carte.image}</code>`;\n      this.replaceWith(espace);\n    };\n    zoneReponseEl.appendChild(img);\n  }\n\n  if (carte.type === \"libre\" || carte.type === \"image\"){\n    const input = document.createElement(\"input\");\n    input.type = \"text\";\n    input.placeholder = \"Écris ta réponse…\";\n    input.autocomplete = \"off\";\n    input.id = \"champ-libre\";\n    const btn = document.createElement(\"button\");\n    btn.className = \"btn-principal\";\n    btn.textContent = \"Valider\";\n    btn.addEventListener(\"click\", () => valider(input.value));\n    input.addEventListener(\"keydown\", e => { if (e.key === \"Enter\") valider(input.value); });\n    zoneReponseEl.appendChild(input);\n    const barre = document.createElement(\"div\");\n    barre.className = \"barre-accents\";\n    \"éèêàâùçôîëï\".split(\"\").forEach(ch => {\n      const b = document.createElement(\"button\");\n      b.type = \"button\";\n      b.className = \"btn-accent\";\n      b.textContent = ch;\n      b.tabIndex = -1;\n      b.setAttribute(\"aria-label\", \"lettre \" + ch);\n      b.addEventListener(\"mousedown\", e => e.preventDefault());\n      b.addEventListener(\"click\", () => {\n        const d = input.selectionStart == null ? input.value.length : input.selectionStart;\n        const f = input.selectionEnd == null ? d : input.selectionEnd;\n        input.value = input.value.slice(0, d) + ch + input.value.slice(f);\n        input.focus();\n        input.setSelectionRange(d + 1, d + 1);\n      });\n      barre.appendChild(b);\n    });\n    zoneReponseEl.appendChild(barre);\n    zoneReponseEl.appendChild(btn);\n    setTimeout(() => input.focus(), 350);\n  } else {\n    const wrap = document.createElement(\"div\");\n    wrap.className = \"options\";\n    const options = carte.type === \"vrai_faux\" ? [\"vrai\", \"faux\"] : carte.options;\n    options.forEach(opt => {\n      // une option peut être une simple chaîne (label = valeur validée) ou\n      // un objet {label, valeur} quand l'intitulé du bouton doit rester\n      // discret sans révéler l'orthographe exacte de la réponse.\n      const estObjet = typeof opt === \"object\" && opt !== null;\n      const label = estObjet ? opt.label : opt;\n      const valeur = estObjet ? opt.valeur : opt;\n      const b = document.createElement(\"button\");\n      b.className = \"btn-option\";\n      b.textContent = label.charAt(0).toUpperCase() + label.slice(1);\n      b.addEventListener(\"click\", () => valider(valeur));\n      wrap.appendChild(b);\n    });\n    zoneReponseEl.appendChild(wrap);\n  }\n  if (voixActive) lireCarteCourante();\n}\n\nfunction valider(reponseDonnee){\n  if (dejaRepondu) return;\n  dejaRepondu = true;\n  const carte = CARTES[carteCourante.idx];\n  const correct = reponseJuste(reponseDonnee, carte.reponse);\n  const presque = seulementAccents(reponseDonnee, carte.reponse);\n  carteCourante.tentatives++;\n  vues.add(carteCourante.idx);\n  if (correct) reussies.add(carteCourante.idx);\n  if (correct && carteCourante.tentatives === 1) premier.add(carteCourante.idx);\n\n  if (correct){\n    score++;\n    resolues++;\n    verdictBlocEl.className = \"verdict ok\";\n    pastilleEl.className = \"pastille ok\";\n    pastilleEl.textContent = \"✓\";\n    verdictTexteEl.textContent = \"Bravo, c'est juste !\";\n  } else if (carteCourante.tentatives < MAX_TENTATIVES){\n    // comme la carte ratée remise sous le tas : on la repropose plus tard\n    // dans la même partie, sans encore la compter comme terminée.\n    const decalage = Math.min(file.length, 2 + Math.floor(Math.random() * 3));\n    file.splice(decalage, 0, carteCourante);\n    verdictBlocEl.className = \"verdict reprise\";\n    pastilleEl.className = \"pastille reprise\";\n    pastilleEl.textContent = \"↻\";\n    verdictTexteEl.textContent = \"Pas tout à fait. On la reverra un peu plus tard.\";\n  } else {\n    resolues++;\n    verdictBlocEl.className = \"verdict non\";\n    pastilleEl.className = \"pastille non\";\n    pastilleEl.textContent = \"✗\";\n    verdictTexteEl.textContent = \"Pas grave, ce mot reviendra une prochaine fois.\";\n  }\n  if (presque) verdictTexteEl.textContent = \"Presque ! Vérifie les accents. \" + (carteCourante.tentatives < MAX_TENTATIVES ? \"On la reverra un peu plus tard.\" : \"Ce mot reviendra une prochaine fois.\");\n  const piegeEl = document.getElementById(\"piege\");\n  if (!correct && PIEGES){\n    piegeEl.textContent = \"💡 \" + PIEGES;\n    piegeEl.style.display = \"block\";\n  } else {\n    piegeEl.textContent = \"\";\n    piegeEl.style.display = \"none\";\n  }\n  rappelQuestionEl.textContent = carte.clue;\n  reponseCorrecteEl.textContent = carte.reponse;\n  if (carte.mot && normalise(carte.mot) !== normalise(carte.reponse)) {\n    motCibleEl.innerHTML = `Mot cible : <strong>${carte.mot}</strong>`;\n    motCibleEl.style.display = \"block\";\n  } else {\n    motCibleEl.textContent = \"\";\n    motCibleEl.style.display = \"none\";\n  }\n  annonceEl.textContent = correct ? \"Bonne réponse\" : \"Réponse incorrecte, la bonne réponse s'affiche\";\n\n  carteEl.classList.add(\"retournee\");\n  if (voixActive) lireCorrection();\n}\n\ndocument.getElementById(\"btn-suivant\").addEventListener(\"click\", piocherSuivante);\n\nfunction finDePartie(){\n  if (VOIX_OK) window.speechSynthesis.cancel();\n  sceneEl.style.display = \"none\";\n  ecranFinEl.style.display = \"block\";\n  const nbVues = vues.size;\n  const scoreEl = document.getElementById(\"score-final\");\n  const introEl = document.getElementById(\"texte-score-intro\");\n  const echelleEl = document.getElementById(\"echelle-verbale\");\n  const detailEl = document.getElementById(\"detail-score\");\n  if (nbVues === 0){\n    introEl.textContent = \"Tu n'as pas encore joué de carte.\";\n    scoreEl.textContent = \"0 / 0\";\n    detailEl.textContent = \"\";\n    echelleEl.textContent = \"\";\n  } else {\n    introEl.textContent = \"Du premier coup, tu as réussi\";\n    scoreEl.textContent = `${premier.size} / ${nbVues}`;\n    detailEl.textContent = `Avec les reprises : ${reussies.size} / ${nbVues}`;\n    const pourcentage = Math.round((premier.size / nbVues) * 100);\n    echelleEl.textContent = messageEchelle(pourcentage);\n  }\n  motsARevoir = [...vues].filter(i => !premier.has(i)).map(i => CARTES[i].mot || CARTES[i].reponse);\n  const liste = document.getElementById(\"liste-a-revoir\");\n  const blocRevoir = document.getElementById(\"bloc-revoir\");\n  liste.innerHTML = \"\";\n  if (motsARevoir.length === 0){\n    blocRevoir.style.display = \"none\";\n  } else {\n    blocRevoir.style.display = \"block\";\n    [...new Set(motsARevoir)].forEach(mot => {\n      const li = document.createElement(\"li\");\n      li.textContent = mot;\n      liste.appendChild(li);\n    });\n  }\n}\n\ndocument.getElementById(\"btn-rejouer\").addEventListener(\"click\", demarrer);\n\ndocument.getElementById(\"btn-terminer\").addEventListener(\"click\", finDePartie);\ndocument.getElementById(\"voix-recto\").addEventListener(\"click\", lireCarteCourante);\ndocument.getElementById(\"voix-dos\").addEventListener(\"click\", lireCorrection);\ndocument.getElementById(\"voix-consigne\").addEventListener(\"click\",\n  () => parler(document.getElementById(\"texte-consigne\").textContent.replace(\"✏️\", \"\")));\n\nif (!VOIX_OK){\n  document.body.classList.add(\"sans-voix\");\n  document.getElementById(\"ligne-voix\").style.display = \"none\";\n  document.getElementById(\"note-voix\").style.display = \"none\";\n}\nconst optVoix = document.getElementById(\"opt-voix\");\nvoixActive = VOIX_OK && lireReglage(\"mdm-voix\") === \"1\";\noptVoix.checked = voixActive;\noptVoix.addEventListener(\"change\", () => {\n  voixActive = optVoix.checked;\n  ecrireReglage(\"mdm-voix\", voixActive ? \"1\" : \"0\");\n  if (voixActive && carteCourante && !dejaRepondu) lireCarteCourante();\n  if (!voixActive && VOIX_OK) window.speechSynthesis.cancel();\n});\nconst optAccents = document.getElementById(\"opt-accents\");\naccentsStricts = lireReglage(\"mdm-accents\") !== \"0\";\noptAccents.checked = accentsStricts;\ndocument.body.classList.toggle(\"accents-off\", !accentsStricts);\nconst optTouches = document.getElementById(\"opt-touches\");\noptTouches.checked = lireReglage(\"mdm-touches\") === \"1\";\ndocument.body.classList.toggle(\"touches-on\", optTouches.checked);\noptTouches.addEventListener(\"change\", () => {\n  ecrireReglage(\"mdm-touches\", optTouches.checked ? \"1\" : \"0\");\n  document.body.classList.toggle(\"touches-on\", optTouches.checked);\n});\noptAccents.addEventListener(\"change\", () => {\n  accentsStricts = optAccents.checked;\n  ecrireReglage(\"mdm-accents\", accentsStricts ? \"1\" : \"0\");\n  document.body.classList.toggle(\"accents-off\", !accentsStricts);\n});\nconst typesSauves = lireReglage(\"mdm-types\");\nif (typesSauves){\n  const t = new Set(typesSauves.split(\",\").filter(x => TYPES_LABELS[x] && CARTES.some(c => c.type === x)));\n  if (t.size) typesActifs = t;\n}\nconstruireFiltres();\ndemarrer();\n<\/script>\n<script data-goatcounter=\"https://euryale.goatcounter.com/count\" async src=\"//gc.zgo.at/count.js\"><\/script>\n</body>\n</html>\n";
+
+let cartes = [];
+let compteur = 0;
+
+function normalise(s){
+  return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function detecteFuite(carte){
+  const mot = carte.mot || carte.reponse || "";
+  if (!mot) return null;
+  const clue = carte.clue || "";
+  const morceaux = mot.split("/").map(m => m.trim()).filter(m => m.length >= 3);
+  for (const m of morceaux){
+    if (normalise(clue).includes(normalise(m))){
+      return `Attention : « ${m} » semble déjà visible dans la question — le mot risque de se voir directement.`;
+    }
+  }
+  return null;
+}
+
+function creerCarte(){
+  compteur++;
+  return {
+    id: compteur,
+    type: "libre",
+    clue: "",
+    reponse: "",
+    mot: "",
+    image: "",
+    options: ["", ""],
+    lot: null,
+  };
+}
+
+function ajouterCarte(){
+  cartes.push(creerCarte());
+  rendre();
+}
+
+function retirerCarte(id){
+  cartes = cartes.filter(c => c.id !== id);
+  rendre();
+}
+
+function champTexte(carte, cle, el){
+  carte[cle] = el.value;
+  majFuite(carte, el.closest(".carte-item"));
+  }
+
+function champ(carte, cle, valeur){
+  carte[cle] = valeur;
+  rendre();
+}
+
+function majFuite(carte, div){
+  div.querySelectorAll(".alerte-fuite, .ok-fuite").forEach(n => n.remove());
+  const alerte = detecteFuite({
+    type: carte.type,
+    clue: carte.clue,
+    reponse: carte.reponse,
+    mot: carte.mot || carte.reponse,
+  });
+  if (carte.type !== "vrai_faux" && carte.clue && carte.reponse){
+    const p = document.createElement("p");
+    if (alerte){
+      p.className = "alerte-fuite";
+      p.textContent = "⚠ " + alerte;
+    } else {
+      p.className = "ok-fuite";
+      p.textContent = "✓ Le mot n'apparaît pas dans l'indice.";
+    }
+    div.appendChild(p);
+  }
+}
+
+function ajouterChampMot(div, carte){
+  const l = document.createElement("label");
+  l.textContent = "Mot affiché dans « à revoir » (facultatif, ex. « un jus » — sinon la réponse)";
+  div.appendChild(l);
+  const i = document.createElement("input");
+  i.type = "text";
+  i.value = carte.mot || "";
+  i.addEventListener("input", e => champTexte(carte, "mot", e.target));
+  div.appendChild(i);
+}
+
+function ajouterChampLot(div, carte){
+  const l = document.createElement("label");
+  l.textContent = "Lot de mots (1 = appris en premier, 3 = en dernier ; facultatif)";
+  div.appendChild(l);
+  const sel = document.createElement("select");
+  [["", "Aucun (toujours jouable)"], ["1", "Lot 1"], ["2", "Lot 2"], ["3", "Lot 3"]].forEach(([v, t]) => {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = t;
+    if (String(carte.lot || "") === v) o.selected = true;
+    sel.appendChild(o);
+  });
+  sel.addEventListener("change", e => { carte.lot = e.target.value ? parseInt(e.target.value, 10) : null; });
+  div.appendChild(sel);
+}
+
+function rendreCarteHTML(carte, index){
+  const div = document.createElement("div");
+  div.className = "carte-item";
+
+  const num = document.createElement("span");
+  num.className = "num";
+  num.textContent = `Carte ${index + 1}`;
+  div.appendChild(num);
+
+  const retirer = document.createElement("button");
+  retirer.className = "retirer";
+  retirer.type = "button";
+  retirer.textContent = "✕";
+  retirer.title = "Retirer cette carte";
+  retirer.addEventListener("click", () => retirerCarte(carte.id));
+  div.appendChild(retirer);
+
+  const typeLabel = document.createElement("label");
+  typeLabel.textContent = "Type de carte";
+  div.appendChild(typeLabel);
+
+  const typeSelect = document.createElement("select");
+  typeSelect.className = "type-select";
+  [["libre", "Devinette (le joueur tape le mot)"],
+   ["image", "Image (le joueur tape le mot correspondant)"],
+   ["choix", "Choix (2-3 options à cliquer)"],
+   ["vrai_faux", "Vrai ou Faux"]].forEach(([val, label]) => {
+    const opt = document.createElement("option");
+    opt.value = val;
+    opt.textContent = label;
+    if (carte.type === val) opt.selected = true;
+    typeSelect.appendChild(opt);
+  });
+  typeSelect.addEventListener("change", e => champ(carte, "type", e.target.value));
+  div.appendChild(typeSelect);
+
+  if (carte.type === "vrai_faux"){
+    const l1 = document.createElement("label");
+    l1.textContent = "Affirmation";
+    div.appendChild(l1);
+    const t1 = document.createElement("textarea");
+    t1.placeholder = "Ex. : Les mots HOMME et POMME s'écrivent tous les deux avec deux M.";
+    t1.value = carte.clue;
+    t1.addEventListener("input", e => champTexte(carte, "clue", e.target));
+    div.appendChild(t1);
+
+    const l2 = document.createElement("label");
+    l2.textContent = "Réponse correcte";
+    div.appendChild(l2);
+    const select = document.createElement("select");
+    ["vrai", "faux"].forEach(v => {
+      const opt = document.createElement("option");
+      opt.value = v; opt.textContent = v === "vrai" ? "Vrai" : "Faux";
+      if (carte.reponse === v) opt.selected = true;
+      select.appendChild(opt);
+    });
+    select.addEventListener("change", e => champ(carte, "reponse", e.target.value));
+    div.appendChild(select);
+
+    const l3 = document.createElement("label");
+    l3.textContent = "Mot cible (optionnel, affiché dans la liste « à revoir »)";
+    div.appendChild(l3);
+    const i3 = document.createElement("input");
+    i3.type = "text";
+    i3.placeholder = "Ex. : homme / pomme";
+    i3.value = carte.mot;
+    i3.addEventListener("input", e => champTexte(carte, "mot", e.target));
+    div.appendChild(i3);
+
+  } else if (carte.type === "choix"){
+    const l1 = document.createElement("label");
+    l1.textContent = "Question";
+    div.appendChild(l1);
+    const t1 = document.createElement("textarea");
+    t1.placeholder = "Ex. : Le mot qui désigne... a-t-il un ou deux M ?";
+    t1.value = carte.clue;
+    t1.addEventListener("input", e => champTexte(carte, "clue", e.target));
+    div.appendChild(t1);
+
+    const l2 = document.createElement("label");
+    l2.textContent = "Options (2 à 3)";
+    div.appendChild(l2);
+    const ligne = document.createElement("div");
+    ligne.className = "ligne-options";
+    carte.options.forEach((opt, i) => {
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.placeholder = `Option ${i + 1}`;
+      inp.value = opt;
+      inp.addEventListener("input", e => {
+        carte.options[i] = e.target.value;
+        majFuite(carte, div);
+      });
+      ligne.appendChild(inp);
+    });
+    div.appendChild(ligne);
+
+    const l3 = document.createElement("label");
+    l3.textContent = "Réponse correcte (doit correspondre exactement à une option)";
+    div.appendChild(l3);
+    const i3 = document.createElement("input");
+    i3.type = "text";
+    i3.value = carte.reponse;
+    i3.addEventListener("input", e => champTexte(carte, "reponse", e.target));
+    div.appendChild(i3);
+
+    const l4 = document.createElement("label");
+    l4.textContent = "Mot cible réel (le mot que ça teste, ex. « armoire »)";
+    div.appendChild(l4);
+    const i4 = document.createElement("input");
+    i4.type = "text";
+    i4.value = carte.mot;
+    i4.addEventListener("input", e => champTexte(carte, "mot", e.target));
+    div.appendChild(i4);
+
+  } else if (carte.type === "image"){
+    const lf = document.createElement("label");
+    lf.textContent = "Choisis l'image sur ton ordinateur (elle sera intégrée dans le fichier)";
+    div.appendChild(lf);
+    const fi = document.createElement("input");
+    fi.type = "file";
+    fi.accept = "image/*";
+    fi.addEventListener("change", e => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const im = new Image();
+        im.onload = () => {
+          const k = Math.min(1, 400 / Math.max(im.width, im.height));
+          const c = document.createElement("canvas");
+          c.width = Math.max(1, Math.round(im.width * k));
+          c.height = Math.max(1, Math.round(im.height * k));
+          const ctx = c.getContext("2d");
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.drawImage(im, 0, 0, c.width, c.height);
+          carte.image = c.toDataURL("image/jpeg", 0.85);
+          rendre();
+        };
+        im.src = reader.result;
+      };
+      reader.readAsDataURL(f);
+    });
+    div.appendChild(fi);
+    if (carte.image && carte.image.indexOf("data:") === 0){
+      const apercu = document.createElement("img");
+      apercu.src = carte.image;
+      apercu.style.cssText = "max-height:80px;max-width:100%;display:block;margin:6px 0;border-radius:6px;";
+      div.appendChild(apercu);
+    }
+    const l1 = document.createElement("label");
+    l1.textContent = "…ou nom d'un fichier à déposer dans un dossier images/ (facultatif)";
+    div.appendChild(l1);
+    const i1 = document.createElement("input");
+    i1.type = "text";
+    i1.placeholder = "Ex. : pomme.jpg";
+    i1.value = (carte.image && carte.image.indexOf("data:") === 0) ? "" : carte.image;
+    i1.addEventListener("input", e => champTexte(carte, "image", e.target));
+    div.appendChild(i1);
+    const note = document.createElement("p");
+    note.className = "champ-image-note";
+    note.textContent = "Sans image choisie ni fichier déposé, un cadre « image manquante » s'affiche : rien n'est cassé.";
+    div.appendChild(note);
+
+    const l2 = document.createElement("label");
+    l2.textContent = "Mot à écrire";
+    div.appendChild(l2);
+    const i2 = document.createElement("input");
+    i2.type = "text";
+    i2.value = carte.reponse;
+    i2.addEventListener("input", e => champTexte(carte, "reponse", e.target));
+    div.appendChild(i2);
+    ajouterChampMot(div, carte);
+
+  } else {
+    const l1 = document.createElement("label");
+    l1.textContent = "Indice (ne doit jamais contenir le mot à deviner)";
+    div.appendChild(l1);
+    const t1 = document.createElement("textarea");
+    t1.placeholder = "Ex. : Je suis un mot invariable. Je m'écris avec deux M.";
+    t1.value = carte.clue;
+    t1.addEventListener("input", e => champTexte(carte, "clue", e.target));
+    div.appendChild(t1);
+
+    const l2 = document.createElement("label");
+    l2.textContent = "Mot à deviner";
+    div.appendChild(l2);
+    const i2 = document.createElement("input");
+    i2.type = "text";
+    i2.value = carte.reponse;
+    i2.addEventListener("input", e => champTexte(carte, "reponse", e.target));
+    div.appendChild(i2);
+    ajouterChampMot(div, carte);
+  }
+
+  ajouterChampLot(div, carte);
+  majFuite(carte, div);
+
+  return div;
+}
+
+function rendre(){
+  const liste = document.getElementById("liste-cartes");
+  liste.innerHTML = "";
+  cartes.forEach((carte, i) => liste.appendChild(rendreCarteHTML(carte, i)));
+  document.getElementById("resume").textContent =
+    cartes.length === 0 ? "Aucune carte pour l'instant" :
+    `${cartes.length} carte${cartes.length > 1 ? "s" : ""}`;
+}
+
+document.getElementById("btn-ajouter-carte").addEventListener("click", ajouterCarte);
+
+document.getElementById("btn-generer").addEventListener("click", () => {
+  const messageEl = document.getElementById("message-final");
+  const titre = document.getElementById("titre-seance").value.trim();
+
+  if (!titre){
+    messageEl.className = "message-final";
+    messageEl.textContent = "Donne un titre à la séance avant de générer.";
+    return;
+  }
+  if (cartes.length === 0){
+    messageEl.className = "message-final";
+    messageEl.textContent = "Ajoute au moins une carte avant de générer.";
+    return;
+  }
+
+  const cartesFinales = cartes.map(c => {
+    if (c.type === "vrai_faux"){
+      return { type: "vrai_faux", clue: c.clue, reponse: c.reponse || "vrai",
+               mot: c.mot || null, lot: c.lot || null };
+    }
+    if (c.type === "choix"){
+      const options = c.options.map(o => o.trim()).filter(Boolean);
+      return { type: "choix", clue: c.clue, options,
+               reponse: c.reponse, mot: c.mot || c.reponse, lot: c.lot || null };
+    }
+    if (c.type === "image"){
+      return { type: "image", image: c.image,
+               clue: "Écris le mot correspondant à l'image.",
+               reponse: c.reponse, mot: c.mot || c.reponse, lot: c.lot || null };
+    }
+    return { type: "libre", clue: c.clue, reponse: c.reponse, mot: c.mot || c.reponse, lot: c.lot || null };
+  });
+
+  const cartesJson = JSON.stringify(cartesFinales, null, 2).split("</").join("<\\/");
+  let html = TEMPLATE_JEU;
+  html = html.replace("__TITRE_PAGE__", () => `Maître des mots ! — ${titre}`);
+  html = html.replace("__H1__",
+    () => `<h1>Maître des mots <span class="accent">! ${titre}</span></h1>`);
+  html = html.replace("__CARTES_JSON__", () => cartesJson);
+  const piegesJson = JSON.stringify(document.getElementById("pieges-seance").value.trim()).split("</").join("<\\/");
+  html = html.replace("__PIEGES_JSON__", () => piegesJson);
+
+  const nomFichier = "maitre-des-mots-" + titre.replace(/\s+/g, "-") + ".html";
+  try {
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = nomFichier;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    messageEl.className = "message-final succes";
+    messageEl.innerHTML = "";
+    messageEl.appendChild(document.createTextNode(`✓ ${nomFichier} généré. Si rien ne se télécharge : `));
+    const lien = document.createElement("a");
+    lien.href = url;
+    lien.download = nomFichier;
+    lien.textContent = "clique ici";
+    lien.style.color = "inherit";
+    messageEl.appendChild(lien);
+  } catch (err) {
+    messageEl.className = "message-final";
+    messageEl.textContent = "Erreur pendant la génération : " + err.message;
+  }
+});
+
+document.getElementById("fichier-existant").addEventListener("change", e => {
+  const f = e.target.files[0];
+  const msg = document.getElementById("message-import");
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const txt = reader.result;
+      const debut = txt.indexOf("const CARTES = ");
+      let fin = debut < 0 ? -1 : txt.indexOf("const PIEGES = ", debut);
+      if (debut >= 0 && fin < 0) fin = txt.indexOf("const ETIQUETTES", debut);
+      if (debut < 0 || fin < 0) throw new Error("Ce fichier ne ressemble pas à un jeu « Maître des mots » (liste de cartes introuvable).");
+      const brut = txt.slice(debut + "const CARTES = ".length, fin).trim().replace(/;$/, "");
+      const liste = JSON.parse(brut);
+      if (!Array.isArray(liste)) throw new Error("Liste de cartes illisible.");
+      const dejaSaisi = cartes.some(c => c.clue || c.reponse);
+      if (dejaSaisi && !confirm("Remplacer les cartes actuellement saisies par celles du fichier ?")) return;
+      const titrePage = new DOMParser().parseFromString(txt, "text/html").title || "";
+      const titre = titrePage.indexOf("—") >= 0 ? titrePage.split("—").slice(1).join("—").trim() : titrePage.trim();
+      cartes = liste.map(c => {
+        compteur++;
+        const opts = Array.isArray(c.options)
+          ? c.options.map(o => (o && typeof o === "object") ? (o.valeur || o.label) : o)
+          : ["", ""];
+        return {
+          id: compteur,
+          type: c.type || "libre",
+          clue: c.clue || "",
+          reponse: c.reponse || "",
+          mot: (c.mot && c.mot !== c.reponse) ? c.mot : "",
+          image: c.image || "",
+          options: opts.length ? opts : ["", ""],
+          lot: c.lot || null,
+        };
+      });
+      document.getElementById("titre-seance").value = titre;
+      let pieges = "";
+      const dp = txt.indexOf("const PIEGES = ");
+      if (dp >= 0){
+        const fp = txt.indexOf(";", dp);
+        try { pieges = JSON.parse(txt.slice(dp + "const PIEGES = ".length, fp)); } catch (e2) { pieges = ""; }
+      }
+      document.getElementById("pieges-seance").value = pieges;
+      rendre();
+      msg.className = "message-final succes";
+      msg.textContent = `✓ ${cartes.length} cartes chargées depuis ${f.name}.`;
+    } catch (err) {
+      msg.className = "message-final";
+      msg.textContent = "Impossible d'ouvrir ce fichier : " + err.message;
+    }
+  };
+  reader.readAsText(f);
+  e.target.value = "";
+});
+
+document.getElementById("btn-lots").addEventListener("click", () => {
+  cartes.forEach((c, i) => { c.lot = i < 5 ? 1 : i < 10 ? 2 : 3; });
+  rendre();
+});
+
+ajouterCarte();
+</script>
+<script data-goatcounter="https://euryale.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
